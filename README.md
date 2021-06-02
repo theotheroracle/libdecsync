@@ -1,5 +1,5 @@
 
-libdecsync ![img](https://copr.fedorainfracloud.org/coprs/theoracle/Evolution-Decsync/package/libdecsync/status_image/last_build.png)
+libdecsync [![Copr build status](https://copr.fedorainfracloud.org/coprs/theoracle/Evolution-Decsync/package/libdecsync/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/theoracle/Evolution-Decsync/package/libdecsync/)
 ==========
 
 libdecsync is a multiplatform library for synchronizing using [DecSync](https://github.com/39aldo39/DecSync).
