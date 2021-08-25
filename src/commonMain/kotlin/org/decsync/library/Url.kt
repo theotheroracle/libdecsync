@@ -25,7 +25,7 @@ object Url {
 
     fun encode(input: String): String {
         val output = input.encodeToByteArray().joinToString("") { byte ->
-            val char = byte.toChar()
+            val char = byte.toInt().toChar()
             if (char in safeChars) {
                 val charArray = CharArray(1)
                 charArray[0] = char
@@ -59,7 +59,7 @@ object Url {
                     bytes[j++] = value.toByte()
                     i += 2
                 }
-                in safeChars -> bytes[j++] = c.toByte()
+                in safeChars -> bytes[j++] = c.code.toByte()
                 else -> return null
             }
             i++
