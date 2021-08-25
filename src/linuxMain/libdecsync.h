@@ -361,6 +361,8 @@ inline static void decsync_init_stored_entries(Decsync decsync) {
 }
 
 /**
+ * Deprecated. Its use should not be necessary. Partially replaced by [getEntriesCount].
+ *
  * Returns the most up-to-date appId. This is the appId which has stored the most recent entry. In
  * case of a tie, the appId corresponding to the current application is used, if possible.
  *
@@ -388,6 +390,22 @@ inline static void decsync_latest_app_id(Decsync decsync, char* app_id, int len)
  */
 inline static void decsync_get_static_info(const char* decsync_dir, const char* sync_type, const char* collection, const char* key, char* value, int len) {
     decsync_so_get_static_info(decsync_dir, sync_type, collection, key, value, len);
+}
+
+/**
+ * Counts the number of non-null entries in the given DecSync dir [decsyncDir], sync type [syncType]
+ * and collection [collection]. It only considers entries with the given path [prefix].
+ *
+ * Mainly useful for debugging purposes for the user.
+ *
+ * @param decsync_dir the path to the main DecSync directory.
+ * @param sync_type the type of data to sync. For example, "contacts" or "calendars".
+ * @param collection collection identifier.
+ * @param path path prefix to the entries to executes.
+ * @param len_path length of [path].
+ */
+inline static int decsync_get_entries_count(const char* decsync_dir, const char* sync_type, const char* collection, const char** path, int len) {
+    return decsync_so_get_entries_count(decsync_dir, sync_type, collection, path, len);
 }
 
 /**
