@@ -25,26 +25,29 @@ import kotlin.random.Random
 @SharedImmutable
 val json = Json.Default
 
-const val SUPPORTED_VERSION = 1
+const val SUPPORTED_VERSION = 2
 const val DEFAULT_VERSION = 1
 
 enum class DecsyncVersion {
-    V1;
+    V1, V2;
 
     fun toInt(): Int =
             when (this) {
                 V1 -> 1
+                V2 -> 2
             }
 
     override fun toString(): String =
             when (this) {
                 V1 -> "v1"
+                V2 -> "v2"
             }
 
     companion object {
         fun fromInt(input: Int): DecsyncVersion? =
                 when (input) {
                     1 -> V1
+                    2 -> V2
                     else -> null
                 }
     }
@@ -127,7 +130,9 @@ class Decsync<T> internal constructor(
         if (localVersion != null) {
             version = localVersion
         } else {
-            version = getLatestOwnDecsyncVersion() ?: getLatestDecsyncVersion() ?: decsyncVersion
+            version = getLatestDecsyncVersion(decsyncDir, syncType, collection, ownAppId) ?:
+                    getLatestDecsyncVersion(decsyncDir, syncType, collection) ?:
+                    decsyncVersion
             localInfo["version"] = JsonPrimitive(version.toInt())
             writeLocalInfo()
         }
@@ -137,6 +142,7 @@ class Decsync<T> internal constructor(
     private fun <V> getInstance(decsyncVersion: DecsyncVersion): DecsyncInst<V> {
         return when (decsyncVersion) {
             DecsyncVersion.V1 -> DecsyncV1(decsyncDir, localDir, syncType, collection, ownAppId)
+            DecsyncVersion.V2 -> DecsyncV2(decsyncDir, localDir, syncType, collection, ownAppId)
         }
     }
 
@@ -428,36 +434,11 @@ class Decsync<T> internal constructor(
      * Returns the most up-to-date appId. This is the appId which has stored the most recent entry.
      * In case of a tie, the appId corresponding to the current application is used, if possible.
      */
+    @Deprecated(
+            message = "Its use should not be necessary. Partially replaced by [getEntriesCount].",
+            level = DeprecationLevel.WARNING
+    )
     fun latestAppId(): String = instance.latestAppId()
-
-    private fun getLatestOwnDecsyncVersion(): DecsyncVersion? {
-        val subdir = getDecsyncSubdir(decsyncDir, syncType, collection)
-        if (subdir.child("stored-entries", ownAppId).file.fileSystemNode is RealDirectory) return DecsyncVersion.V1
-        return null
-    }
-
-    private fun getLatestDecsyncVersion(): DecsyncVersion? {
-        val subdir = getDecsyncSubdir(decsyncDir, syncType, collection)
-        if (subdir.child("stored-entries").file.fileSystemNode is RealDirectory) return DecsyncVersion.V1
-        return null
-    }
-
-    private fun <T> upgrade(oldDecsync: DecsyncInst<MutableList<EntryWithPath>>, newDecsync: DecsyncInst<T>) {
-        // Get old entries
-        oldDecsync.addListener(emptyList()) { path, entry, entriesWithPath ->
-            entriesWithPath.add(EntryWithPath(path, entry))
-        }
-        val entriesWithPath = mutableListOf<EntryWithPath>()
-        oldDecsync.executeStoredEntriesForPathPrefix(emptyList(), entriesWithPath)
-
-        // Set new entries
-        newDecsync.setEntries(entriesWithPath)
-
-        // Delete old entries
-        async {
-            oldDecsync.deleteOwnEntries()
-        }
-    }
 
     companion object {
         /**
@@ -472,7 +453,63 @@ class Decsync<T> internal constructor(
             val info = mutableMapOf<JsonElement, JsonElement>()
             val datetimes = mutableMapOf<JsonElement, String>()
             DecsyncV1.getStaticInfo(decsyncDir, syncType, collection, info, datetimes)
+            if (version >= DecsyncVersion.V2) {
+                DecsyncV2.getStaticInfo(decsyncDir, syncType, collection, info, datetimes)
+            }
             return info
+        }
+
+        /**
+         * Counts the number of non-null entries in the given DecSync dir [decsyncDir], sync type
+         * [syncType] and collection [collection]. It only considers entries with the given path
+         * [prefix].
+         *
+         * Mainly useful for debugging purposes for the user.
+         */
+        fun getEntriesCount(decsyncDir: NativeFile, syncType: String, collection: String?, prefix: List<String>): Int {
+            Log.d("Getting the entries count in $decsyncDir for syncType $syncType and collection $collection")
+            val latestVersion = getLatestDecsyncVersion(decsyncDir, syncType, collection) ?: return 0
+            return when (latestVersion) {
+                DecsyncVersion.V1 -> DecsyncV1.getEntriesCount(decsyncDir, syncType, collection, prefix)
+                DecsyncVersion.V2 -> DecsyncV2.getEntriesCount(decsyncDir, syncType, collection, prefix)
+            }
+        }
+
+        private fun getLatestDecsyncVersion(decsyncDir: NativeFile, syncType: String, collection: String?, appId: String? = null): DecsyncVersion? {
+            val subdir = getDecsyncSubdir(decsyncDir, syncType, collection)
+
+            // v2
+            var dirV2 = subdir.child("v2")
+            if (appId != null) {
+                dirV2 = dirV2.child(appId)
+            }
+            if (dirV2.file.fileSystemNode is RealDirectory) return DecsyncVersion.V2
+
+            // v1
+            var dirV1 = subdir.child("stored-entries")
+            if (appId != null) {
+                dirV1 = dirV1.child(appId)
+            }
+            if (dirV1.file.fileSystemNode is RealDirectory) return DecsyncVersion.V1
+
+            return null
+        }
+
+        private fun <T> upgrade(oldDecsync: DecsyncInst<MutableList<EntryWithPath>>, newDecsync: DecsyncInst<T>) {
+            // Get old entries
+            oldDecsync.addListener(emptyList()) { path, entry, entriesWithPath ->
+                entriesWithPath.add(EntryWithPath(path, entry))
+            }
+            val entriesWithPath = mutableListOf<EntryWithPath>()
+            oldDecsync.executeStoredEntriesForPathPrefix(emptyList(), entriesWithPath)
+
+            // Set new entries
+            newDecsync.setEntries(entriesWithPath)
+
+            // Delete old entries
+            async {
+                oldDecsync.deleteOwnEntries()
+            }
         }
 
         data class AppData(val appId: String, val lastActive: String?, val version: DecsyncVersion)
@@ -491,6 +528,16 @@ class Decsync<T> internal constructor(
                 appDatas += AppData(appId, lastActive, DecsyncVersion.V1)
             }
 
+            // Version 2
+            if (version >= DecsyncVersion.V2) {
+                val appIdsV2 = DecsyncV2.getActiveApps(decsyncDir, syncType, collection)
+                val infoV2 = DecsyncV2.getStaticInfo(decsyncDir, syncType, collection)
+                for (appId in appIdsV2) {
+                    val lastActive = infoV2[JsonPrimitive("last-active-$appId")]?.jsonPrimitive?.content
+                    appDatas += AppData(appId, lastActive, DecsyncVersion.V2)
+                }
+            }
+
             appDatas.sortWith(
                     compareBy(AppData::lastActive)
                             .thenBy(AppData::version)
@@ -505,6 +552,9 @@ class Decsync<T> internal constructor(
                 DecsyncVersion.V1 -> {
                     val includeNewEntries = currentVersion > DecsyncVersion.V1
                     DecsyncV1.deleteApp(decsyncDir, syncType, collection, appId, includeNewEntries)
+                }
+                DecsyncVersion.V2 -> {
+                    DecsyncV2.deleteApp(decsyncDir, syncType, collection, appId)
                 }
             }
         }
