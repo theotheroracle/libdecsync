@@ -23,12 +23,18 @@ jobs:
       # Build
       - run: CALL gradlew.bat linkReleaseSharedMingwX64
         shell: cmd
+      - run: CALL gradlew.bat linkReleaseSharedMingwX86
+        shell: cmd
 
       # Upload decsync.dll
       - uses: actions/upload-artifact@v2
         with:
-          name: decsync.dll
+          name: decsync_x64.dll
           path: build/bin/mingwX64/releaseShared/decsync.dll
+      - uses: actions/upload-artifact@v2
+        with:
+          name: decsync_x86.dll
+          path: build/bin/mingwX86/releaseShared/decsync.dll
 
       # Setup signing and publish
       - run: CALL echo %GPG_KEY_CONTENTS% > %SIGNING_SECRET_KEY_RING_FILE%.base64 && CALL certutil -decode %SIGNING_SECRET_KEY_RING_FILE%.base64 %SIGNING_SECRET_KEY_RING_FILE% && CALL gradlew.bat publishMingwX64PublicationToMavenRepository
@@ -42,19 +48,29 @@ jobs:
 
       # Build
       - run: ./gradlew linkReleaseSharedLinuxX64
+      - run: ./gradlew linkReleaseSharedLinuxArm64
+      - run: ./gradlew linkReleaseSharedLinuxArm32Hfp
 
       # Upload libdecsync.so
       - uses: actions/upload-artifact@v2
         with:
-          name: libdecsync.so
+          name: libdecsync_amd64.so
           path: build/bin/linuxX64/releaseShared/libdecsync.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libdecsync_arm64.so
+          path: build/bin/linuxArm64/releaseShared/libdecsync.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libdecsync_arm32.so
+          path: build/bin/linuxArm32Hfp/releaseShared/libdecsync.so
 
       # Create and upload libdecsync.deb
       - run: ./create-deb.sh
       - uses: actions/upload-artifact@v2
         with:
           name: libdecsync.deb
-          path: deb.deb
+          path: libdecsync.deb
 
       # Setup signing and publish
       - run: echo "$GPG_KEY_CONTENTS" | base64 -d > "$SIGNING_SECRET_KEY_RING_FILE" && ./gradlew publish
