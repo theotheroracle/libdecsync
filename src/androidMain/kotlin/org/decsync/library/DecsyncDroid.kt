@@ -222,6 +222,13 @@ object DecsyncPrefUtils {
     }
 
     @RequiresApi(21)
+    fun removeDecsyncDir(context: Context) {
+        val editor = PreferenceManager.getDefaultSharedPreferences(context).edit()
+        editor.remove(DECSYNC_DIRECTORY)
+        editor.apply()
+    }
+
+    @RequiresApi(21)
     fun getNameFromUri(context: Context, uri: Uri): String {
         val cr = context.contentResolver
         return cr.query(uri, arrayOf(
