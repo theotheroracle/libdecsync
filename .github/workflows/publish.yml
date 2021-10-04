@@ -39,8 +39,27 @@ jobs:
       # Setup signing and publish
       - run: CALL echo %GPG_KEY_CONTENTS% > %SIGNING_SECRET_KEY_RING_FILE%.base64 && CALL certutil -decode %SIGNING_SECRET_KEY_RING_FILE%.base64 %SIGNING_SECRET_KEY_RING_FILE% && CALL gradlew.bat publishMingwX64PublicationToMavenRepository
         shell: cmd
+  publish-macos:
+    runs-on: macos-latest
+    steps:
+      # Checkout
+      - uses: actions/checkout@v2
+
+      # Build
+      - run: ./gradlew linkReleaseSharedMacosX64
+      - run: ./gradlew linkReleaseSharedMacosArm64
+
+      # Upload
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libdecsync_amd64.dylib
+          path: build/bin/macosX64/releaseShared/libdecsync.dylib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libdecsync_arm64.dylib
+          path: build/bin/macosArm64/releaseShared/libdecsync.dylib
   publish-linux-and-misc:
-    needs: [publish-windows]
+    needs: [publish-windows, publish-macos]
     runs-on: ubuntu-latest
     steps:
       # Checkout
