@@ -8,6 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: ./gradlew linuxX64Test
+      - run: ./gradlew linuxX86Test
       - run: make
       - run: prefix=usr make install
       - run: g++ src/nativeTest/cpp/test.cpp -I usr/include -L usr/lib -l decsync -pthread -o test
@@ -17,6 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: CALL gradlew.bat mingwX64Test
+        shell: cmd
+      - run: CALL gradlew.bat mingwX86Test
         shell: cmd
   test-macos:
     runs-on: macos-latest
