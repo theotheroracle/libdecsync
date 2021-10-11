@@ -5,15 +5,22 @@ RM=rm -f
 
 uname_m := $(shell uname -m)
 ifeq ($(uname_m),x86_64)
-  platform=linuxX64
+  platform?=linuxX64
 else ifeq ($(uname_m:arm%=),)
   bits := $(shell getconf LONG_BIT)
   ifeq ($(bits),64)
-    platform=linuxArm64
+    platform?=linuxArm64
   else
-    platform=linuxArm32Hfp
+    platform?=linuxArm32Hfp
   endif
-else
+else ifeq ($(uname_m:aarch%=),)
+  bits := $(shell getconf LONG_BIT)
+  ifeq ($(bits),64)
+    platform?=linuxArm64
+  else
+    platform?=linuxArm32Hfp
+  endif
+else ifndef platform
   $(error Unsupported platform $(uname_m))
 endif
 
