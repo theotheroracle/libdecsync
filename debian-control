@@ -1,5 +1,5 @@
 Package: libdecsync
-Version: 2.1.1
+Version: 2.1.2
 Architecture: amd64
 Maintainer: Aldo Gunsing <dev@aldogunsing.nl>
 Homepage: https://github.com/39aldo39/libdecsync
