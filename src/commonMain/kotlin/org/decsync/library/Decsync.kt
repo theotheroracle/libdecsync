@@ -331,6 +331,7 @@ class Decsync<T> internal constructor(
             val newVersion = getDecsyncVersion(decsyncInfo)!!
             if (oldVersion < newVersion) {
                 Log.d("Upgrading from DecSync version $oldVersion to $newVersion")
+                decsyncDir.resetCache() // Make sure no duplicate directories are created for the new version
                 val oldDecsync = getInstance<MutableList<EntryWithPath>>(oldVersion)
                 val newDecsync = getInstance<T>(newVersion)
                 newDecsync.listeners.addAll(instance.listeners)
