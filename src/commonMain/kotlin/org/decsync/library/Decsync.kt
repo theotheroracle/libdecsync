@@ -513,7 +513,7 @@ class Decsync<T> internal constructor(
             }
         }
 
-        data class AppData constructor(val appId: String, val lastActive: String?, val version: DecsyncVersion, val supportedVersion: Int?)
+        data class AppData(val appId: String, val lastActive: String?, val version: DecsyncVersion, val supportedVersion: Int?)
 
         fun getActiveApps(decsyncDir: NativeFile, syncType: String, collection: String?): Pair<DecsyncVersion, List<AppData>> {
             Log.d("Get active apps in $decsyncDir for syncType $syncType and collection $collection")
