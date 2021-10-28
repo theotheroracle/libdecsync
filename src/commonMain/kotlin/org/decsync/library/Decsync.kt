@@ -25,9 +25,6 @@ import kotlin.random.Random
 @SharedImmutable
 val json = Json.Default
 
-const val SUPPORTED_VERSION = 2
-const val DEFAULT_VERSION = 1
-
 enum class DecsyncVersion {
     V1, V2;
 
@@ -52,6 +49,9 @@ enum class DecsyncVersion {
                 }
     }
 }
+
+val SUPPORTED_VERSION = DecsyncVersion.V2
+val DEFAULT_VERSION = DecsyncVersion.V2
 
 expect sealed class DecsyncException : Exception
 expect fun getInvalidInfoException(e: Exception): DecsyncException
@@ -327,8 +327,7 @@ class Decsync<T> internal constructor(
 
         if (!disableMaintenance) {
             val oldVersion = version
-            val decsyncInfo = getDecsyncInfoOrDefault(decsyncDir)
-            val newVersion = getDecsyncVersion(decsyncInfo)!!
+            val newVersion = getNewDecsyncVersion(decsyncDir)
             if (oldVersion < newVersion) {
                 Log.d("Upgrading from DecSync version $oldVersion to $newVersion")
                 decsyncDir.resetCache() // Make sure no duplicate directories are created for the new version
@@ -353,11 +352,12 @@ class Decsync<T> internal constructor(
                 setEntry(listOf("info"), JsonPrimitive("last-active-$ownAppId"), JsonPrimitive(currentDate))
             }
 
-            val supportedVersion = localInfo["supported-version"]?.jsonPrimitive?.int
+            val supportedVersion = localInfo["supported-version"]?.jsonPrimitive?.int?.let(DecsyncVersion::fromInt)
             if (supportedVersion == null || SUPPORTED_VERSION > supportedVersion) {
-                localInfo["supported-version"] = JsonPrimitive(SUPPORTED_VERSION)
+                val supportedVersionPrimitive = JsonPrimitive(SUPPORTED_VERSION.toInt())
+                localInfo["supported-version"] = supportedVersionPrimitive
                 writeLocalInfo()
-                setEntry(listOf("info"), JsonPrimitive("supported-version-$ownAppId"), JsonPrimitive(SUPPORTED_VERSION))
+                setEntry(listOf("info"), JsonPrimitive("supported-version-$ownAppId"), supportedVersionPrimitive)
             }
         }
     }
@@ -513,7 +513,7 @@ class Decsync<T> internal constructor(
             }
         }
 
-        data class AppData(val appId: String, val lastActive: String?, val version: DecsyncVersion)
+        data class AppData constructor(val appId: String, val lastActive: String?, val version: DecsyncVersion, val supportedVersion: Int?)
 
         fun getActiveApps(decsyncDir: NativeFile, syncType: String, collection: String?): Pair<DecsyncVersion, List<AppData>> {
             Log.d("Get active apps in $decsyncDir for syncType $syncType and collection $collection")
@@ -526,7 +526,8 @@ class Decsync<T> internal constructor(
             val infoV1 = DecsyncV1.getStaticInfo(decsyncDir, syncType, collection)
             for (appId in appIdsV1) {
                 val lastActive = infoV1[JsonPrimitive("last-active-$appId")]?.jsonPrimitive?.content
-                appDatas += AppData(appId, lastActive, DecsyncVersion.V1)
+                val supportedVersion = infoV1[JsonPrimitive("supported-version-$appId")]?.jsonPrimitive?.int
+                appDatas += AppData(appId, lastActive, DecsyncVersion.V1, supportedVersion)
             }
 
             // Version 2
@@ -535,7 +536,8 @@ class Decsync<T> internal constructor(
                 val infoV2 = DecsyncV2.getStaticInfo(decsyncDir, syncType, collection)
                 for (appId in appIdsV2) {
                     val lastActive = infoV2[JsonPrimitive("last-active-$appId")]?.jsonPrimitive?.content
-                    appDatas += AppData(appId, lastActive, DecsyncVersion.V2)
+                    val supportedVersion = infoV2[JsonPrimitive("supported-version-$appId")]?.jsonPrimitive?.int
+                    appDatas += AppData(appId, lastActive, DecsyncVersion.V2, supportedVersion)
                 }
             }
 
@@ -758,7 +760,7 @@ private fun getDecsyncInfo(decsyncDir: NativeFile): JsonObject? {
 
 @SharedImmutable
 private val defaultDecsyncInfo: JsonObject = buildJsonObject {
-    put("version", DEFAULT_VERSION)
+    put("version", DEFAULT_VERSION.toInt())
 }
 
 @ExperimentalStdlibApi
@@ -776,7 +778,56 @@ private fun getDecsyncVersion(info: Map<String, JsonElement>): DecsyncVersion? {
     } catch (e: Exception) {
         throw getInvalidInfoException(e)
     } ?: return null
-    return DecsyncVersion.fromInt(version) ?: throw getUnsupportedVersionException(version, SUPPORTED_VERSION)
+    return DecsyncVersion.fromInt(version) ?: throw getUnsupportedVersionException(version, SUPPORTED_VERSION.toInt())
+}
+
+private fun getIsFixed(info: Map<String, JsonElement>): Boolean {
+    return try {
+        info["fixed"]?.jsonPrimitive?.boolean ?: false
+    } catch (e: Exception) {
+        false
+    }
+}
+
+@ExperimentalStdlibApi
+private fun getNewDecsyncVersion(decsyncDir: NativeFile): DecsyncVersion {
+    val decsyncInfo = getDecsyncInfoOrDefault(decsyncDir)
+    val version = getDecsyncVersion(decsyncInfo)!!
+    if (version >= DEFAULT_VERSION || getIsFixed(decsyncInfo)) return version
+
+    // Check if all active apps support the new version
+    val syncTypesWithoutCollections = listOf("rss")
+    val syncTypesWithCollections = listOf("contacts", "calendars", "tasks")
+    for (syncType in syncTypesWithoutCollections) {
+        val (_, appDatas) = Decsync.getActiveApps(decsyncDir, syncType, null)
+        if (appDatas.any(::isLegacyAppData)) return version
+    }
+    for (syncType in syncTypesWithCollections) {
+        val collections = listDecsyncCollections(decsyncDir, syncType)
+        for (collection in collections) {
+            val (_, appDatas) = Decsync.getActiveApps(decsyncDir, syncType, collection)
+            if (appDatas.any(::isLegacyAppData)) return version
+        }
+    }
+
+    // Update to new default version
+    val newDecsyncInfo = buildJsonObject {
+        for ((key, value) in decsyncInfo.entries) {
+            if (key != "version") {
+                put(key, value)
+            }
+        }
+        put("version", DEFAULT_VERSION.toInt())
+    }
+    setDecsyncInfo(decsyncDir, newDecsyncInfo)
+    return DEFAULT_VERSION
+}
+
+@ExperimentalStdlibApi
+private fun isLegacyAppData(appData: Decsync.Companion.AppData): Boolean {
+    // If an active app explicitly doesn't support the latest version, we do not upgrade
+    return appData.lastActive != null && appData.lastActive >= oldDatetime() &&
+            appData.supportedVersion != null && appData.supportedVersion < DEFAULT_VERSION.toInt()
 }
 
 @ExperimentalStdlibApi

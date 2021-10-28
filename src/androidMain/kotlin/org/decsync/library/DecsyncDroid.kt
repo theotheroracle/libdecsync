@@ -419,7 +419,8 @@ class AppDataAdapter(
         val appData = getItem(position) ?: Decsync.Companion.AppData(
                 context.getString(R.string.app_id),
                 context.getString(R.string.last_active),
-                currentVersion)
+                currentVersion,
+                null)
         val isOwnApp = isOwnApp(position, appData)
         val isEnabled = isEnabled(position, appData)
 
