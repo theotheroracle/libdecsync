@@ -96,7 +96,7 @@ class NativeFile constructor(
                 // There should never be an empty file
                 // It probably means that an (uncaught) error occurred
                 if (readBytes == 0 && bytes.isEmpty()) {
-                    throw Exception("Read empty file: $this")
+                    Log.e("Read empty file: $this") // TODO: Don't crash, as it does seem to happen sometimes...
                 }
             }
             is RealDirectory -> throw Exception("read called on directory $this")
