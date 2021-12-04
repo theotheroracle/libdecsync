@@ -67,10 +67,13 @@ dependencies {
 }
 
 kotlin {
+    // Android
     android {
         publishLibraryVariantsGroupedByFlavor = true
         publishAllLibraryVariants()
     }
+
+    // Linux
     linuxX64 {
         binaries {
             sharedLib {
@@ -92,6 +95,8 @@ kotlin {
             }
         }
     }
+
+    // Windows
     mingwX64 {
         binaries {
             sharedLib {
@@ -106,6 +111,8 @@ kotlin {
             }
         }
     }
+
+    // MacOS
     macosX64 {
         binaries {
             sharedLib {
@@ -122,6 +129,7 @@ kotlin {
     }
 
     sourceSets {
+        // Common
         commonMain {
             dependencies {
                 implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.1"
@@ -133,12 +141,16 @@ kotlin {
                 implementation "org.jetbrains.kotlin:kotlin-test-annotations-common"
             }
         }
+
+        // Native
         nativeMain {
             dependsOn commonMain
         }
         nativeTest {
             dependsOn commonTest
         }
+
+        // General Linux
         linuxMain {
             dependsOn nativeMain
         }
@@ -148,32 +160,63 @@ kotlin {
         linux32Main {
             dependsOn linuxMain
         }
+
+        // General Windows
+        windowsMain {
+            dependsOn nativeMain
+        }
+
+        // General MacOS
+        macosMain {
+            dependsOn nativeMain
+        }
+
+        // Linux targets
         linuxX64Main {
             dependsOn linux64Main
+        }
+        linuxX64Test {
+            dependsOn nativeTest
         }
         linuxArm64Main {
             dependsOn linux64Main
         }
+        linuxArm64Test {
+            dependsOn nativeTest
+        }
         linuxArm32HfpMain {
             dependsOn linux32Main
         }
-        windowsMain {
-            dependsOn nativeMain
+        linuxArm32HfpTest {
+            dependsOn nativeTest
         }
+
+        // Windows targets
         mingwX64Main {
             dependsOn windowsMain
+        }
+        mingwX64Test {
+            dependsOn nativeTest
         }
         mingwX86Main {
             dependsOn windowsMain
         }
-        macosMain {
-            dependsOn nativeMain
+        mingwX86Test {
+            dependsOn nativeTest
         }
+
+        // MacOS targets
         macosX64Main {
             dependsOn macosMain
         }
+        macosX64Test {
+            dependsOn nativeTest
+        }
         macosArm64Main {
             dependsOn macosMain
+        }
+        macosArm64Test {
+            dependsOn nativeTest
         }
     }
 }
