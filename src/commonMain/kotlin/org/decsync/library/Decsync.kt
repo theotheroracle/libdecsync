@@ -50,7 +50,9 @@ enum class DecsyncVersion {
     }
 }
 
+@SharedImmutable
 val SUPPORTED_VERSION = DecsyncVersion.V2
+@SharedImmutable
 val DEFAULT_VERSION = DecsyncVersion.V2
 
 expect sealed class DecsyncException : Exception
