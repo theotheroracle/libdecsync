@@ -19,6 +19,7 @@
 package org.decsync.library
 
 expect fun getDeviceName(): String
-expect fun currentDatetime(): String
+expect fun currentDatetime(): String // Now
+expect fun oldDatetime(): String // One month (30 days) ago
 expect fun byteArrayToString(input: ByteArray): String
 expect fun async(f: () -> Unit)

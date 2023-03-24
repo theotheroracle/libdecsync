@@ -222,6 +222,13 @@ object DecsyncPrefUtils {
     }
 
     @RequiresApi(21)
+    fun removeDecsyncDir(context: Context) {
+        val editor = PreferenceManager.getDefaultSharedPreferences(context).edit()
+        editor.remove(DECSYNC_DIRECTORY)
+        editor.apply()
+    }
+
+    @RequiresApi(21)
     fun getNameFromUri(context: Context, uri: Uri): String {
         val cr = context.contentResolver
         return cr.query(uri, arrayOf(
@@ -412,7 +419,8 @@ class AppDataAdapter(
         val appData = getItem(position) ?: Decsync.Companion.AppData(
                 context.getString(R.string.app_id),
                 context.getString(R.string.last_active),
-                currentVersion)
+                currentVersion,
+                null)
         val isOwnApp = isOwnApp(position, appData)
         val isEnabled = isEnabled(position, appData)
 

@@ -74,7 +74,7 @@ class DecsyncFile(val file: NativeFile) {
         return when (lines.size) {
             0 -> null
             1 -> lines[0]
-            else -> throw Exception("Multiple lines read as text: $lines")
+            else -> throw Exception("Multiple lines read as text in $this: $lines")
         }
     }
 

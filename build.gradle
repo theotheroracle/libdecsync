@@ -1,13 +1,13 @@
 buildscript {
-    ext.kotlin_version = '1.5.30'
+    ext.kotlin_version = '1.7.10'
 
     repositories {
-        jcenter()
+        mavenCentral()
         google()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.3'
+        classpath 'com.android.tools.build:gradle:7.2.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
@@ -19,7 +19,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 group = "org.decsync"
-version = "2.0.1"
+version = "2.2.1"
 
 repositories {
     mavenCentral()
@@ -27,12 +27,12 @@ repositories {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 32
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 29
-        versionCode 24
+        targetSdkVersion 32
+        versionCode 30
         versionName version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,10 +55,10 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.3.1'
-    implementation 'androidx.preference:preference:1.1.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0'
-    implementation 'androidx.work:work-runtime-ktx:2.5.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'androidx.preference:preference:1.2.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
+    implementation 'androidx.work:work-runtime-ktx:2.7.1'
 
     androidTestImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     androidTestImplementation "com.android.support.test:runner:1.0.2"
@@ -67,10 +67,13 @@ dependencies {
 }
 
 kotlin {
+    // Android
     android {
         publishLibraryVariantsGroupedByFlavor = true
         publishAllLibraryVariants()
     }
+
+    // Linux
     linuxX64 {
         binaries {
             sharedLib {
@@ -92,6 +95,8 @@ kotlin {
             }
         }
     }
+
+    // Windows
     mingwX64 {
         binaries {
             sharedLib {
@@ -107,10 +112,27 @@ kotlin {
         }
     }
 
+    // MacOS
+    macosX64 {
+        binaries {
+            sharedLib {
+                baseName = "decsync"
+            }
+        }
+    }
+    macosArm64 {
+        binaries {
+            sharedLib {
+                baseName = "decsync"
+            }
+        }
+    }
+
     sourceSets {
+        // Common
         commonMain {
             dependencies {
-                implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.0"
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.0"
             }
         }
         commonTest {
@@ -119,12 +141,16 @@ kotlin {
                 implementation "org.jetbrains.kotlin:kotlin-test-annotations-common"
             }
         }
+
+        // Native
         nativeMain {
             dependsOn commonMain
         }
         nativeTest {
             dependsOn commonTest
         }
+
+        // General Linux
         linuxMain {
             dependsOn nativeMain
         }
@@ -134,23 +160,63 @@ kotlin {
         linux32Main {
             dependsOn linuxMain
         }
+
+        // General Windows
+        windowsMain {
+            dependsOn nativeMain
+        }
+
+        // General MacOS
+        macosMain {
+            dependsOn nativeMain
+        }
+
+        // Linux targets
         linuxX64Main {
             dependsOn linux64Main
+        }
+        linuxX64Test {
+            dependsOn nativeTest
         }
         linuxArm64Main {
             dependsOn linux64Main
         }
+        linuxArm64Test {
+            dependsOn nativeTest
+        }
         linuxArm32HfpMain {
             dependsOn linux32Main
         }
-        windowsMain {
-            dependsOn nativeMain
+        linuxArm32HfpTest {
+            dependsOn nativeTest
         }
+
+        // Windows targets
         mingwX64Main {
             dependsOn windowsMain
         }
+        mingwX64Test {
+            dependsOn nativeTest
+        }
         mingwX86Main {
             dependsOn windowsMain
+        }
+        mingwX86Test {
+            dependsOn nativeTest
+        }
+
+        // MacOS targets
+        macosX64Main {
+            dependsOn macosMain
+        }
+        macosX64Test {
+            dependsOn nativeTest
+        }
+        macosArm64Main {
+            dependsOn macosMain
+        }
+        macosArm64Test {
+            dependsOn nativeTest
         }
     }
 }

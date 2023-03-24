@@ -18,22 +18,21 @@
 
 package org.decsync.library
 
-import android.os.AsyncTask
-import android.os.Build
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.*
+import kotlinx.cinterop.*
+import platform.posix.*
 
-actual fun getDeviceName(): String = Build.MODEL
+actual fun Int.off_t(): off_t = this.toLong()
+actual val openFlagsBinary = 0
+actual fun mkdirCustom(path: String, mode: Int) {
+    mkdir(path, mode.toUShort())
+}
+actual fun readCustom(fd: Int, buf: CValuesRef<*>?, len: Int) {
+    read(fd, buf, len.toULong())
+}
+actual fun writeCustom(fd: Int, buf: CValuesRef<*>?, size: Int) {
+    write(fd, buf, size.toULong())
+}
+actual fun gethostnameCustom(name: CValuesRef<ByteVar>, size: Int): Int = gethostname(name, size.toULong())
 
-actual fun currentDatetime(): String = iso8601Format.format(Date())
-actual fun oldDatetime(): String = iso8601Format.format(Date().time - 1000L*60*60*24*30)
-private val iso8601Format: DateFormat =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-
-@ExperimentalStdlibApi
-actual fun byteArrayToString(input: ByteArray): String = input.decodeToString()
-
-actual fun async(f: () -> Unit) = AsyncTask.execute(f)
+actual fun getDefaultDecsyncDir(): String =
+        getenv("DECSYNC_DIR")?.toKString() ?: getenv("HOME")!!.toKString() + "/DecSync"

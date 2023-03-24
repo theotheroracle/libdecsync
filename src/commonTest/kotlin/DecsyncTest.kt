@@ -146,6 +146,7 @@ abstract class DecsyncTest(
         checkExtra(extra2, path, key, value1)
         checkStoredEntry(decsync2, path, key, value1)
         decsync1.setEntriesForPath(path, listOf(Decsync.Entry(datetime2, key, value2)))
+        decsync1.executeAllNewEntries(extra1) // Upgrade decsync1 as well in case of auto upgrade
         extra2.clear()
         decsync2.executeAllNewEntries(extra2)
         checkExtra(extra2, path, key, value2)

@@ -94,6 +94,8 @@ fun decsync(
         decsync[0] = StableRef.create<NativeDecsyncInfo>(
                 NativeDecsyncInfo(decsyncDir, syncType, collection, ownAppId)
         ).asCPointer()
+        // Check the DecSync info as NativeDecsyncInfo does not call the Decsync constructor anymore
+        checkDecsyncInfo(nativeFileFromPath(decsyncDir))
         0
     } catch (e: DecsyncException) {
         e.errorCode

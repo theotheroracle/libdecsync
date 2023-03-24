@@ -18,3 +18,9 @@ jobs:
       - uses: actions/checkout@v2
       - run: CALL gradlew.bat mingwX64Test
         shell: cmd
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: ./gradlew macosX64Test
+      - run: ./gradlew macosArm64Test

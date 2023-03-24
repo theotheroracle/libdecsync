@@ -72,7 +72,7 @@ class NativeFile constructor(
 
     fun child(name: String): NativeFile {
         return when (val node = fileSystemNode) {
-            is RealFile -> throw Exception("child called on file $node")
+            is RealFile -> throw Exception("child called on file $this")
             is RealDirectory -> {
                 node.children(this).find { it.name == name } ?: run {
                     NativeFile(NonExistingNode(name, this), this).also {
@@ -96,10 +96,10 @@ class NativeFile constructor(
                 // There should never be an empty file
                 // It probably means that an (uncaught) error occurred
                 if (readBytes == 0 && bytes.isEmpty()) {
-                    throw Exception("Read empty file: $node")
+                    Log.e("Read empty file: $this") // TODO: Don't crash, as it does seem to happen sometimes...
                 }
             }
-            is RealDirectory -> throw Exception("read called on directory $node")
+            is RealDirectory -> throw Exception("read called on directory $this")
             is NonExistingNode -> null
         }
     }
@@ -118,7 +118,7 @@ class NativeFile constructor(
                 }
                 node.write(text, append)
             }
-            is RealDirectory -> throw Exception("write called on directory $node")
+            is RealDirectory -> throw Exception("write called on directory $this")
             is NonExistingNode -> {
                 // Make sure we do not create empty files
                 if (text.isEmpty()) {
@@ -132,14 +132,14 @@ class NativeFile constructor(
     fun length(): Int {
         return when (val node = fileSystemNode) {
             is RealFile -> node.length()
-            is RealDirectory -> throw Exception("length called on directory $node")
+            is RealDirectory -> throw Exception("length called on directory $this")
             is NonExistingNode -> 0
         }
     }
 
     fun children(): List<NativeFile> {
         return when (val node = fileSystemNode) {
-            is RealFile -> throw Exception("children called on file $node")
+            is RealFile -> throw Exception("children called on file $this")
             is RealDirectory -> node.children(this)
             is NonExistingNode -> emptyList()
         }
@@ -165,7 +165,7 @@ class NativeFile constructor(
 
     fun mkdir(): RealDirectory {
         return when (val node = fileSystemNode) {
-            is RealFile -> throw Exception("Cannot create directory from file $node")
+            is RealFile -> throw Exception("Cannot create directory from file $this")
             is RealDirectory -> node
             is NonExistingNode -> node.parent.mkdir().mkdir(name).also { fileSystemNode = it }
         }

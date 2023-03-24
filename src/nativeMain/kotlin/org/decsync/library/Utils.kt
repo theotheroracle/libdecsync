@@ -40,7 +40,14 @@ actual fun getDeviceName(): String {
 
 actual fun currentDatetime(): String {
     val now = time(null)
-    val tm = gmtime(cValuesOf(now))?.pointed ?: throw Exception("Failed to get current time")
+    return formatDatetime(now)
+}
+actual fun oldDatetime(): String {
+    val old = time(null) - 60*60*24*30
+    return formatDatetime(old)
+}
+private fun formatDatetime(t: time_t): String {
+    val tm = gmtime(cValuesOf(t))?.pointed ?: throw Exception("Failed to get current time")
     val year = (tm.tm_year + 1900).toString()
     val mon = (tm.tm_mon + 1).toString().padStart(2, '0')
     val day = tm.tm_mday.toString().padStart(2, '0')
